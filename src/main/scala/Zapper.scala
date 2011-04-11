@@ -27,7 +27,7 @@ class Zapper extends ScalatraServlet with UrlSupport {
         width: 400px;
         position: absolute;
         top: 20px;
-        left: 100px;
+        left: 50;
         padding-right: 25px;
         border-right: 1px solid #cccccc;
       }
@@ -35,7 +35,7 @@ class Zapper extends ScalatraServlet with UrlSupport {
         width: 200px;
         position: absolute;
         top: 20px;
-        left: 550px;
+        left: 500px;
       }
       #zapForm {
         margin-bottom: 20px;
@@ -212,7 +212,7 @@ class ZapManager(val eventHandler: ActorRef) extends Actor {
 
   def parseZap(zap: Zap): List[Zap] = {
     val mentions = Mentions.ext(zap.userId, zap.text).map(m => m.toLowerCase).toSet
-    zap :: mentions.map(m => Zap(m, zap.userId, zap.text)).toList ::: followersMap.getOrElse(zap.userId, Set.empty[String]).map(f => Zap(f, zap.userId, zap.text)).toList
+    zap :: (mentions.map(m => Zap(m, zap.userId, zap.text)) ++ followersMap.getOrElse(zap.userId, Set.empty[String]).map(f => Zap(f, zap.userId, zap.text))).toList
   }
 
   def receive = {
@@ -222,7 +222,7 @@ class ZapManager(val eventHandler: ActorRef) extends Actor {
     case Follow(userId, followUserId) =>
       val followers: Set[String] = followersMap.getOrElse(followUserId, Set.empty[String])
       if (!followers.contains(userId)) {
-        zapMap.getOrElse(followUserId, Nil).foreach(z => eventHandler ! ZapAdded(Zap(userId, z.author, z.text)))
+        zapMap.getOrElse(followUserId, Nil).foreach(z => if (!z.text.toLowerCase.contains("@" + userId)) eventHandler ! ZapAdded(Zap(userId, z.author, z.text)))
         followersMap.put(followUserId, followers + userId)
         eventHandler ! Followed(userId, followUserId)
       }
